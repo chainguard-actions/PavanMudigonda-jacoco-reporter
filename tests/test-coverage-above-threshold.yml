@@ -1,0 +1,53 @@
+name: Test coverage above minimum threshold passes
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install PowerShell
+        run: |
+          if ! command -v pwsh &>/dev/null; then
+            apt-get update -y && apt-get install -y wget apt-transport-https software-properties-common
+            wget -q "https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb"
+            dpkg -i packages-microsoft-prod.deb
+            apt-get update -y && apt-get install -y powershell
+          fi
+          pwsh --version
+
+      # The test.xml file has coverage; setting minimum to 10 should always pass
+      - id: jacoco
+        uses: .
+        with:
+          coverage_results_path: ${{ github.workspace }}/jacoco-report/test.xml
+          coverage_report_name: Coverage-Threshold-Pass
+          coverage_report_title: JaCoCo Threshold Pass
+          github_token: ${{ github.token }}
+          skip_check_run: "true"
+          minimum_coverage: 10
+          fail_below_threshold: "true"
+          publish_only_summary: "true"
+
+      - name: Assert action succeeded and coverage_percentage is above threshold
+        env:
+          ACTUAL: ${{ steps.jacoco.outputs.coverage_percentage }}
+        run: |
+          echo "coverage_percentage: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: coverage_percentage output is empty"
+            exit 1
+          fi
+          # Coverage should be a number; verify it's greater than 10
+          PCT=$(echo "$ACTUAL" | sed 's/%//' | cut -d'.' -f1)
+          if [ "$PCT" -lt 10 ]; then
+            echo "FAIL: coverage $ACTUAL is below expected minimum of 10%"
+            exit 1
+          fi
+          echo "PASS: coverage $ACTUAL is above threshold of 10%"
