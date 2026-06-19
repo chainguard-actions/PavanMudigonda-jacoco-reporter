@@ -1,0 +1,54 @@
+name: Test JaCoCo reporter with coverage_paths input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_EVENT_NAME: push
+      GITHUB_REF: refs/heads/main
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install PowerShell
+        run: |
+          if ! command -v pwsh &>/dev/null; then
+            apt-get update -y 2>/dev/null || true
+            apt-get install -y powershell 2>/dev/null || true
+          fi
+          if ! command -v pwsh &>/dev/null; then
+            wget -q "https://github.com/PowerShell/PowerShell/releases/download/v7.4.1/powershell_7.4.1-1.deb_amd64.deb" -O /tmp/powershell.deb
+            dpkg -i /tmp/powershell.deb || apt-get install -f -y
+          fi
+          pwsh --version
+
+      - id: jacoco
+        uses: .
+        with:
+          coverage_results_path: ${{ github.workspace }}/tests/fixtures/jacoco.xml
+          coverage_paths: src,lib
+          skip_check_run: "true"
+          publish_only_summary: "true"
+          github_token: "dummy-token-for-local-test"
+
+      - name: Assert coverage_percentage is set
+        env:
+          COVERAGE: ${{ steps.jacoco.outputs.coverage_percentage }}
+        run: |
+          echo "coverage_percentage: $COVERAGE"
+          if [ -z "$COVERAGE" ]; then
+            echo "FAIL: coverage_percentage output is empty"
+            exit 1
+          fi
+          echo "PASS: coverage_percentage=$COVERAGE"
+
+      - name: Assert total_lines is set
+        env:
+          TOTAL: ${{ steps.jacoco.outputs.total_lines }}
+        run: |
+          echo "total_lines: $TOTAL"
+          if [ -z "$TOTAL" ]; then
+            echo "FAIL: total_lines output is empty"
+            exit 1
+          fi
+          echo "PASS: total_lines=$TOTAL"

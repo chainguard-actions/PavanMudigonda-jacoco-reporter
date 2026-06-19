@@ -1,0 +1,71 @@
+name: Test minimum coverage threshold passing
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_EVENT_NAME: push
+      GITHUB_REF: refs/heads/main
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install PowerShell
+        run: |
+          if ! command -v pwsh &>/dev/null; then
+            apt-get update -y 2>/dev/null || true
+            apt-get install -y powershell 2>/dev/null || true
+          fi
+          if ! command -v pwsh &>/dev/null; then
+            wget -q "https://github.com/PowerShell/PowerShell/releases/download/v7.4.1/powershell_7.4.1-1.deb_amd64.deb" -O /tmp/powershell.deb
+            dpkg -i /tmp/powershell.deb || apt-get install -f -y
+          fi
+          pwsh --version
+
+      - id: jacoco
+        uses: .
+        with:
+          coverage_results_path: ${{ github.workspace }}/tests/fixtures/jacoco-high-coverage.xml
+          skip_check_run: "true"
+          publish_only_summary: "true"
+          minimum_coverage: "50"
+          fail_below_threshold: "true"
+          github_token: "dummy-token-for-local-test"
+
+      - name: Assert coverage_percentage is set and numeric
+        env:
+          COVERAGE: ${{ steps.jacoco.outputs.coverage_percentage }}
+        run: |
+          echo "coverage_percentage: $COVERAGE"
+          if [ -z "$COVERAGE" ]; then
+            echo "FAIL: coverage_percentage output is empty"
+            exit 1
+          fi
+          # Check it's a numeric value (integer or decimal)
+          if ! echo "$COVERAGE" | grep -qE '^[0-9]+(\.[0-9]+)?$'; then
+            echo "FAIL: coverage_percentage '$COVERAGE' is not numeric"
+            exit 1
+          fi
+          echo "PASS: coverage_percentage=$COVERAGE"
+
+      - name: Assert total_lines is set
+        env:
+          TOTAL: ${{ steps.jacoco.outputs.total_lines }}
+        run: |
+          echo "total_lines: $TOTAL"
+          if [ -z "$TOTAL" ]; then
+            echo "FAIL: total_lines output is empty"
+            exit 1
+          fi
+          echo "PASS: total_lines=$TOTAL"
+
+      - name: Assert missed_lines is set
+        env:
+          MISSED: ${{ steps.jacoco.outputs.missed_lines }}
+        run: |
+          echo "missed_lines: $MISSED"
+          if [ -z "$MISSED" ]; then
+            echo "FAIL: missed_lines output is empty"
+            exit 1
+          fi
+          echo "PASS: missed_lines=$MISSED"

@@ -1,0 +1,84 @@
+name: Test skip check run and summary only mode
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_EVENT_NAME: push
+      GITHUB_REF: refs/heads/main
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install PowerShell
+        run: |
+          if ! command -v pwsh &>/dev/null; then
+            apt-get update -y 2>/dev/null || true
+            apt-get install -y powershell 2>/dev/null || true
+          fi
+          if ! command -v pwsh &>/dev/null; then
+            wget -q "https://github.com/PowerShell/PowerShell/releases/download/v7.4.1/powershell_7.4.1-1.deb_amd64.deb" -O /tmp/powershell.deb
+            dpkg -i /tmp/powershell.deb || apt-get install -f -y
+          fi
+          pwsh --version
+
+      - id: jacoco
+        uses: .
+        with:
+          coverage_results_path: ${{ github.workspace }}/tests/fixtures/jacoco.xml
+          skip_check_run: "true"
+          publish_only_summary: "true"
+          coverage_report_name: "MyProject Coverage"
+          coverage_report_title: "MyProject Code Coverage Report"
+          output_level: "normal"
+          github_token: "dummy-token-for-local-test"
+
+      - name: Assert all outputs are populated
+        env:
+          COVERAGE: ${{ steps.jacoco.outputs.coverage_percentage }}
+          COVERED: ${{ steps.jacoco.outputs.covered_lines }}
+          MISSED: ${{ steps.jacoco.outputs.missed_lines }}
+          TOTAL: ${{ steps.jacoco.outputs.total_lines }}
+        run: |
+          echo "coverage_percentage: $COVERAGE"
+          echo "covered_lines: $COVERED"
+          echo "missed_lines: $MISSED"
+          echo "total_lines: $TOTAL"
+
+          FAIL=0
+          if [ -z "$COVERAGE" ]; then
+            echo "FAIL: coverage_percentage is empty"
+            FAIL=1
+          fi
+          if [ -z "$COVERED" ]; then
+            echo "FAIL: covered_lines is empty"
+            FAIL=1
+          fi
+          if [ -z "$MISSED" ]; then
+            echo "FAIL: missed_lines is empty"
+            FAIL=1
+          fi
+          if [ -z "$TOTAL" ]; then
+            echo "FAIL: total_lines is empty"
+            FAIL=1
+          fi
+
+          if [ "$FAIL" = "1" ]; then
+            exit 1
+          fi
+          echo "PASS: all outputs are populated"
+
+      - name: Assert covered + missed equals total
+        env:
+          COVERED: ${{ steps.jacoco.outputs.covered_lines }}
+          MISSED: ${{ steps.jacoco.outputs.missed_lines }}
+          TOTAL: ${{ steps.jacoco.outputs.total_lines }}
+        run: |
+          echo "covered=$COVERED missed=$MISSED total=$TOTAL"
+          SUM=$((COVERED + MISSED))
+          echo "covered + missed = $SUM, total = $TOTAL"
+          if [ "$SUM" != "$TOTAL" ]; then
+            echo "FAIL: covered_lines ($COVERED) + missed_lines ($MISSED) = $SUM != total_lines ($TOTAL)"
+            exit 1
+          fi
+          echo "PASS: line counts are consistent"
