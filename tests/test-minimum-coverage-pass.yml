@@ -1,0 +1,58 @@
+name: Test minimum coverage threshold pass
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install PowerShell
+        run: |
+          if ! command -v pwsh &>/dev/null; then
+            apt-get update -y
+            apt-get install -y powershell || true
+          fi
+          if ! command -v pwsh &>/dev/null; then
+            # Fallback: install via snap
+            snap install powershell --classic || true
+          fi
+          if ! command -v pwsh &>/dev/null; then
+            # Fallback: install via Microsoft script
+            curl -sSL https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+            OS_VERSION=$(. /etc/os-release && echo "$VERSION_ID")
+            curl -sSL "https://packages.microsoft.com/config/ubuntu/${OS_VERSION}/packages-microsoft-prod.deb" -o /tmp/packages-microsoft-prod.deb
+            dpkg -i /tmp/packages-microsoft-prod.deb
+            apt-get update -y
+            apt-get install -y powershell
+          fi
+          pwsh --version
+
+      - id: jacoco
+        uses: .
+        with:
+          coverage_results_path: ${{ github.workspace }}/tests/fixtures/coverage-90pct.xml
+          coverage_report_name: Coverage
+          coverage_report_title: JaCoCo Coverage Report
+          skip_check_run: "true"
+          minimum_coverage: 80
+          fail_below_threshold: "true"
+          publish_only_summary: "true"
+
+      - name: Assert action passed (coverage above threshold)
+        env:
+          ACTUAL: ${{ steps.jacoco.outputs.coverage_percentage }}
+        run: |
+          echo "coverage_percentage: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: coverage_percentage output is empty"
+            exit 1
+          fi
+          # Coverage should be >= 80 (we have 90 covered out of 100 lines)
+          PCT=$(echo "$ACTUAL" | cut -d'.' -f1)
+          echo "Integer coverage: $PCT"
+          if [ "$PCT" -lt 80 ]; then
+            echo "FAIL: expected coverage >= 80%, got $ACTUAL"
+            exit 1
+          fi
+          echo "PASS: coverage $ACTUAL% is above threshold 80%"

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><!DOCTYPE report PUBLIC "-//JACOCO//DTD Report 1.1//EN" "report.dtd"><report name="TestReport">
+    <sessioninfo id="this" start="1618573899222" dump="1618573907682" />
+    <package name="com/example">
+        <class name="com/example/MyClass" sourcefilename="MyClass.java">
+            <method name="myMethod" desc="()V" line="1">
+                <counter type="INSTRUCTION" missed="10" covered="90" />
+                <counter type="LINE" missed="10" covered="90" />
+                <counter type="METHOD" missed="0" covered="1" />
+            </method>
+            <counter type="INSTRUCTION" missed="10" covered="90" />
+            <counter type="LINE" missed="10" covered="90" />
+            <counter type="METHOD" missed="0" covered="1" />
+            <counter type="CLASS" missed="0" covered="1" />
+        </class>
+        <sourcefile name="MyClass.java">
+            <counter type="INSTRUCTION" missed="10" covered="90" />
+            <counter type="LINE" missed="10" covered="90" />
+            <counter type="METHOD" missed="0" covered="1" />
+            <counter type="CLASS" missed="0" covered="1" />
+        </sourcefile>
+        <counter type="INSTRUCTION" missed="10" covered="90" />
+        <counter type="LINE" missed="10" covered="90" />
+        <counter type="METHOD" missed="0" covered="1" />
+        <counter type="CLASS" missed="0" covered="1" />
+    </package>
+    <counter type="INSTRUCTION" missed="10" covered="90" />
+    <counter type="LINE" missed="10" covered="90" />
+    <counter type="METHOD" missed="0" covered="1" />
+    <counter type="CLASS" missed="0" covered="1" />
+</report>
