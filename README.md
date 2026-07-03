@@ -11,6 +11,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 |---------|-----|-----------------|
 | v5.0 | [`v5.0`](https://github.com/chainguard-actions/PavanMudigonda-jacoco-reporter/tree/v5.0) | [`64fa5a1`](https://github.com/PavanMudigonda/jacoco-reporter/commit/64fa5a142a874e1deb636cffd882cecf86a2b9e7) |
 | v5.2-beta | [`v5.2-beta`](https://github.com/chainguard-actions/PavanMudigonda-jacoco-reporter/tree/v5.2-beta) | [`bbe169b`](https://github.com/PavanMudigonda/jacoco-reporter/commit/bbe169bad528e5e84e3bd14f0702b4e824d5b090) |
+| v5.2.1 | [`v5.2.1`](https://github.com/chainguard-actions/PavanMudigonda-jacoco-reporter/tree/v5.2.1) | [`112997f`](https://github.com/PavanMudigonda/jacoco-reporter/commit/112997f0c32da82d8bfa4a972b4afe67a15529fe) |
 
 ## Privacy
 
