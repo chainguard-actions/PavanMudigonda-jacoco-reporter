@@ -1,54 +1,62 @@
-name: Test JaCoCo reporter with coverage_paths input
+name: Test coverage_paths input
 on:
   workflow_dispatch:
+
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_EVENT_NAME: push
-      GITHUB_REF: refs/heads/main
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install PowerShell
         run: |
           if ! command -v pwsh &>/dev/null; then
-            apt-get update -y 2>/dev/null || true
-            apt-get install -y powershell 2>/dev/null || true
-          fi
-          if ! command -v pwsh &>/dev/null; then
-            wget -q "https://github.com/PowerShell/PowerShell/releases/download/v7.4.1/powershell_7.4.1-1.deb_amd64.deb" -O /tmp/powershell.deb
-            dpkg -i /tmp/powershell.deb || apt-get install -f -y
+            apt-get update -qq
+            apt-get install -y wget apt-transport-https software-properties-common
+            wget -q "https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb"
+            dpkg -i packages-microsoft-prod.deb
+            apt-get update -qq
+            apt-get install -y powershell
           fi
           pwsh --version
 
       - id: jacoco
         uses: .
         with:
-          coverage_results_path: ${{ github.workspace }}/tests/fixtures/jacoco.xml
-          coverage_paths: src,lib
+          coverage_results_path: tests/fixtures/jacoco-coverage.xml
+          coverage_paths: "src,lib"
           skip_check_run: "true"
           publish_only_summary: "true"
-          github_token: "dummy-token-for-local-test"
 
-      - name: Assert coverage_percentage is set
+      - name: Assert coverage_percentage is non-empty
         env:
-          COVERAGE: ${{ steps.jacoco.outputs.coverage_percentage }}
+          ACTUAL: ${{ steps.jacoco.outputs.coverage_percentage }}
         run: |
-          echo "coverage_percentage: $COVERAGE"
-          if [ -z "$COVERAGE" ]; then
+          echo "coverage_percentage: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
             echo "FAIL: coverage_percentage output is empty"
             exit 1
           fi
-          echo "PASS: coverage_percentage=$COVERAGE"
+          echo "PASS: coverage_percentage=$ACTUAL"
 
-      - name: Assert total_lines is set
+      - name: Assert covered_lines is non-empty
         env:
-          TOTAL: ${{ steps.jacoco.outputs.total_lines }}
+          ACTUAL: ${{ steps.jacoco.outputs.covered_lines }}
         run: |
-          echo "total_lines: $TOTAL"
-          if [ -z "$TOTAL" ]; then
+          echo "covered_lines: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: covered_lines output is empty"
+            exit 1
+          fi
+          echo "PASS: covered_lines=$ACTUAL"
+
+      - name: Assert total_lines is non-empty
+        env:
+          ACTUAL: ${{ steps.jacoco.outputs.total_lines }}
+        run: |
+          echo "total_lines: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
             echo "FAIL: total_lines output is empty"
             exit 1
           fi
-          echo "PASS: total_lines=$TOTAL"
+          echo "PASS: total_lines=$ACTUAL"

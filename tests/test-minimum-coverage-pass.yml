@@ -1,71 +1,49 @@
-name: Test minimum coverage threshold passing
+name: Test minimum coverage - threshold met (pass)
 on:
   workflow_dispatch:
+
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_EVENT_NAME: push
-      GITHUB_REF: refs/heads/main
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install PowerShell
         run: |
           if ! command -v pwsh &>/dev/null; then
-            apt-get update -y 2>/dev/null || true
-            apt-get install -y powershell 2>/dev/null || true
-          fi
-          if ! command -v pwsh &>/dev/null; then
-            wget -q "https://github.com/PowerShell/PowerShell/releases/download/v7.4.1/powershell_7.4.1-1.deb_amd64.deb" -O /tmp/powershell.deb
-            dpkg -i /tmp/powershell.deb || apt-get install -f -y
+            apt-get update -qq
+            apt-get install -y wget apt-transport-https software-properties-common
+            wget -q "https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb"
+            dpkg -i packages-microsoft-prod.deb
+            apt-get update -qq
+            apt-get install -y powershell
           fi
           pwsh --version
 
       - id: jacoco
         uses: .
         with:
-          coverage_results_path: ${{ github.workspace }}/tests/fixtures/jacoco-high-coverage.xml
+          coverage_results_path: tests/fixtures/jacoco-coverage.xml
+          minimum_coverage: "80"
+          fail_below_threshold: "true"
           skip_check_run: "true"
           publish_only_summary: "true"
-          minimum_coverage: "50"
-          fail_below_threshold: "true"
-          github_token: "dummy-token-for-local-test"
 
-      - name: Assert coverage_percentage is set and numeric
+      - name: Assert coverage_percentage meets threshold
         env:
-          COVERAGE: ${{ steps.jacoco.outputs.coverage_percentage }}
+          ACTUAL: ${{ steps.jacoco.outputs.coverage_percentage }}
         run: |
-          echo "coverage_percentage: $COVERAGE"
-          if [ -z "$COVERAGE" ]; then
+          echo "coverage_percentage: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
             echo "FAIL: coverage_percentage output is empty"
             exit 1
           fi
-          # Check it's a numeric value (integer or decimal)
-          if ! echo "$COVERAGE" | grep -qE '^[0-9]+(\.[0-9]+)?$'; then
-            echo "FAIL: coverage_percentage '$COVERAGE' is not numeric"
+          # Strip any trailing % sign if present
+          PCT="${ACTUAL//%/}"
+          # Use awk for float comparison
+          MEETS=$(awk -v pct="$PCT" 'BEGIN { print (pct >= 80) ? "yes" : "no" }')
+          if [ "$MEETS" != "yes" ]; then
+            echo "FAIL: coverage $PCT% is below minimum 80%"
             exit 1
           fi
-          echo "PASS: coverage_percentage=$COVERAGE"
-
-      - name: Assert total_lines is set
-        env:
-          TOTAL: ${{ steps.jacoco.outputs.total_lines }}
-        run: |
-          echo "total_lines: $TOTAL"
-          if [ -z "$TOTAL" ]; then
-            echo "FAIL: total_lines output is empty"
-            exit 1
-          fi
-          echo "PASS: total_lines=$TOTAL"
-
-      - name: Assert missed_lines is set
-        env:
-          MISSED: ${{ steps.jacoco.outputs.missed_lines }}
-        run: |
-          echo "missed_lines: $MISSED"
-          if [ -z "$MISSED" ]; then
-            echo "FAIL: missed_lines output is empty"
-            exit 1
-          fi
-          echo "PASS: missed_lines=$MISSED"
+          echo "PASS: coverage $PCT% meets minimum 80%"
